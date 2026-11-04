@@ -4,6 +4,8 @@ import android.net.Uri
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.Protocol
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.mlm.adblock.AdblockEngine
 import org.mlm.adblock.RequestTypeMapper
 import java.io.IOException
@@ -56,7 +58,7 @@ object NativeAdblock {
                 currentStatus = if (enabled.get()) {
                     "Ready • EasyList + EasyPrivacy loaded • ${blockedCount.get()} blocked"
                 } else "Ready • protection paused"
-            } catch (error: Exception) {
+            } catch (error: Throwable) {
                 currentStatus = "Not ready • ${error.message ?: "filter download failed"}"
             }
             onStatus(currentStatus)
@@ -78,7 +80,7 @@ object NativeAdblock {
                 engine = instance
                 initialized = true
                 currentStatus = "Updated • EasyList + EasyPrivacy loaded"
-            } catch (error: Exception) {
+            } catch (error: Throwable) {
                 currentStatus = "Update failed • ${error.message ?: "network error"}"
             }
             onStatus(currentStatus)
@@ -127,7 +129,13 @@ object NativeAdblock {
 
             if (decision.matched && !decision.exception) {
                 blockedCount.incrementAndGet()
-                throw IOException("Blocked by Brave adblock-rust")
+                return Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(204)
+                    .message("Blocked by Brave adblock-rust")
+                    .body(ByteArray(0).toResponseBody(null))
+                    .build()
             }
 
             val rewritten = decision.rewrittenUrl
