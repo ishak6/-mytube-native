@@ -131,6 +131,8 @@ private fun MyTubeApp(
     var braveStatus by remember { mutableStateOf("Initializing Brave filter engine…") }
     var showSettings by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    val youtubePrefs = remember { context.getSharedPreferences("mytube_youtube", Context.MODE_PRIVATE) }
+    var youtubeApiKey by remember { mutableStateOf(youtubePrefs.getString("api_key", "") ?: "") }
     var activeVideo by remember { mutableStateOf<LocalVideo?>(null) }
     val player = remember { ExoPlayer.Builder(context).build() }
 
@@ -238,7 +240,12 @@ private fun MyTubeApp(
                             privacyPrefs.edit().putBoolean("brave_protection", enabled).apply()
                         },
                         braveStatus = braveStatus,
-                        onRefreshBrave = { NativeAdblock.refresh { status -> braveStatus = status } }
+                        onRefreshBrave = { NativeAdblock.refresh { status -> braveStatus = status } },
+                        youtubeApiKey = youtubeApiKey,
+                        onYouTubeApiKeyChange = { key ->
+                            youtubeApiKey = key
+                            youtubePrefs.edit().putString("api_key", key.trim()).apply()
+                        }
                     )
                     activeVideo != null -> PlayerScreen(video = activeVideo!!, player = player, onClose = {
                         player.pause()
@@ -246,6 +253,7 @@ private fun MyTubeApp(
                     })
                     selectedTab == 0 -> HomeScreen(
                         videos = videos,
+                        youtubeApiKey = youtubeApiKey,
                         onImport = { onImport?.invoke() },
                         onPlay = { video -> playVideo(video, player) { activeVideo = video } },
                         onLibrary = { selectedTab = 3 }
@@ -254,10 +262,11 @@ private fun MyTubeApp(
                         query = searchQuery,
                         onQueryChange = { searchQuery = it },
                         videos = videos,
+                        youtubeApiKey = youtubeApiKey,
                         onPlay = { playVideo(it, player) { activeVideo = it } },
                         onImport = { onImport?.invoke() }
                     )
-                    selectedTab == 2 -> ShortsScreen(videos = videos, onPlay = { playVideo(it, player) { activeVideo = it } }, onImport = { onImport?.invoke() })
+                    selectedTab == 2 -> ShortsScreen(videos = videos, youtubeApiKey = youtubeApiKey, onPlay = { playVideo(it, player) { activeVideo = it } }, onImport = { onImport?.invoke() })
                     selectedTab == 3 -> LibraryScreen(
                         videos = videos,
                         onPlay = { playVideo(it, player) { activeVideo = it } },
@@ -284,6 +293,7 @@ private fun playVideo(video: LocalVideo, player: ExoPlayer, onPlaying: () -> Uni
 @Composable
 private fun HomeScreen(
     videos: List<LocalVideo>,
+    youtubeApiKey: String,
     onImport: () -> Unit,
     onPlay: (LocalVideo) -> Unit,
     onLibrary: () -> Unit
@@ -305,13 +315,13 @@ private fun HomeScreen(
                 }
             }
         }
+        item { YouTubeHomeFeed(apiKey = youtubeApiKey) }
         item { Text("Recently added", fontSize = 19.sp, fontWeight = FontWeight.SemiBold) }
         if (videos.isEmpty()) {
             item { EmptyCard("Your library is empty", "Tap Import video to choose a video stored on your phone.") }
         } else {
             items(videos.take(8), key = { it.uri }) { video -> VideoRow(video = video, onPlay = { onPlay(video) }) }
         }
-        item { EmptyCard("Online discovery", "YouTube-style online feeds need an approved content API. No fake videos or fabricated search results are displayed.") }
     }
 }
 
@@ -320,11 +330,13 @@ private fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     videos: List<LocalVideo>,
+    youtubeApiKey: String,
     onPlay: (LocalVideo) -> Unit,
     onImport: () -> Unit
 ) {
     val results = videos.filter { it.title.contains(query, ignoreCase = true) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
+        YouTubeSearchFeed(apiKey = youtubeApiKey)
         Text("Search your videos", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = query,
@@ -346,9 +358,10 @@ private fun SearchScreen(
 }
 
 @Composable
-private fun ShortsScreen(videos: List<LocalVideo>, onPlay: (LocalVideo) -> Unit, onImport: () -> Unit) {
+private fun ShortsScreen(videos: List<LocalVideo>, youtubeApiKey: String, onPlay: (LocalVideo) -> Unit, onImport: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
-        Text("Shorts", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        YouTubeShortsFeed(apiKey = youtubeApiKey)
+        Text("Shorts • Local videos", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         EmptyCard("Local short-video shelf", "This section can play videos you import. A public Shorts feed is not connected because it requires an authorized content source.")
         if (videos.isEmpty()) {
             Button(onClick = onImport) { Icon(Icons.Filled.Add, null); Text("  Import a video") }
@@ -408,7 +421,9 @@ private fun SettingsScreen(
     braveProtection: Boolean,
     onBraveProtectionChange: (Boolean) -> Unit,
     braveStatus: String,
-    onRefreshBrave: () -> Unit
+    onRefreshBrave: () -> Unit,
+    youtubeApiKey: String,
+    onYouTubeApiKeyChange: (String) -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
         item { Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
@@ -419,6 +434,16 @@ private fun SettingsScreen(
                 checked = darkMode,
                 onCheckedChange = onDarkModeChange
             )
+        }
+        item { Text("YouTube connection", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("YouTube Data API v3", fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(value = youtubeApiKey, onValueChange = onYouTubeApiKeyChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("API key") })
+                    Text("Google Cloud Console-এ YouTube Data API v3 enable করে API key তৈরি করুন। এই key দিয়ে public video search ও metadata feed চলবে; এটি video stream URL দেয় না।", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
         }
         item { Text("Privacy & ad protection", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
         item {
