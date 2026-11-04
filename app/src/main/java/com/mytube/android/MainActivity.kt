@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
                 // Some document providers do not offer persistable permissions.
             }
             val title = queryDisplayName(uri) ?: "Video ${System.currentTimeMillis()}"
-            setContent { MyTubeApp(initialImport = LocalVideo(uri.toString(), title)) }
+            setContent { MyTubeApp(onImport = { videoPicker.launch(arrayOf("video/*")) }, initialImport = LocalVideo(uri.toString(), title)) }
         }
     }
 
@@ -212,7 +212,7 @@ private fun MyTubeApp(
                     selectedTab == 0 -> HomeScreen(
                         videos = videos,
                         onImport = { onImport?.invoke() },
-                        onPlay = { playVideo(it, player) { activeVideo = it } },
+                        onPlay = { video -> playVideo(video, player) { activeVideo = video } },
                         onLibrary = { selectedTab = 3 }
                     )
                     selectedTab == 1 -> SearchScreen(
