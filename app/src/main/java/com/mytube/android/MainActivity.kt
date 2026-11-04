@@ -105,7 +105,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun launchVideoPicker() {\n        videoPicker.launch(arrayOf("video/*"))\n    }\n\n    override fun onCreate(savedInstanceState: Bundle?) {
+    private fun launchVideoPicker() {
+        videoPicker.launch(arrayOf("video/*"))
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MyTubeApp(onImport = { launchVideoPicker() }) }
     }
@@ -120,6 +124,9 @@ private fun MyTubeApp(
     val videos = remember { mutableStateListOf<LocalVideo>().apply { addAll(loadVideos(context)) } }
     var selectedTab by remember { mutableStateOf(0) }
     var darkMode by remember { mutableStateOf(true) }
+    val privacyPrefs = remember { context.getSharedPreferences("mytube_privacy", Context.MODE_PRIVATE) }
+    var showMyTubePromotions by remember { mutableStateOf(privacyPrefs.getBoolean("show_myTube_promotions", false)) }
+    var usageAnalytics by remember { mutableStateOf(privacyPrefs.getBoolean("usage_analytics", false)) }
     var showSettings by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var activeVideo by remember { mutableStateOf<LocalVideo?>(null) }
@@ -204,7 +211,20 @@ private fun MyTubeApp(
                 Spacer(Modifier.height(12.dp))
 
                 when {
-                    showSettings -> SettingsScreen(darkMode = darkMode, onDarkModeChange = { darkMode = it })
+                    showSettings -> SettingsScreen(
+                        darkMode = darkMode,
+                        onDarkModeChange = { darkMode = it },
+                        showMyTubePromotions = showMyTubePromotions,
+                        onPromotionsChange = {
+                            showMyTubePromotions = it
+                            privacyPrefs.edit().putBoolean("show_myTube_promotions", it).apply()
+                        },
+                        usageAnalytics = usageAnalytics,
+                        onAnalyticsChange = {
+                            usageAnalytics = it
+                            privacyPrefs.edit().putBoolean("usage_analytics", it).apply()
+                        }
+                    )
                     activeVideo != null -> PlayerScreen(video = activeVideo!!, player = player, onClose = {
                         player.pause()
                         activeVideo = null
@@ -363,20 +383,77 @@ private fun PremiumScreen(onSettings: () -> Unit) {
 }
 
 @Composable
-private fun SettingsScreen(darkMode: Boolean, onDarkModeChange: (Boolean) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxSize()) {
-        Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold)
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f)) {
-                    Text("Dark theme", fontWeight = FontWeight.SemiBold)
-                    Text("Turn dark appearance on or off.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = darkMode, onCheckedChange = onDarkModeChange)
-            }
+private fun SettingsScreen(
+    darkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit,
+    showMyTubePromotions: Boolean,
+    onPromotionsChange: (Boolean) -> Unit,
+    usageAnalytics: Boolean,
+    onAnalyticsChange: (Boolean) -> Unit
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
+        item { Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
+        item {
+            SettingSwitchCard(
+                title = "Dark theme",
+                description = "Use the dark appearance throughout mytube.",
+                checked = darkMode,
+                onCheckedChange = onDarkModeChange
+            )
         }
-        EmptyCard("Privacy", "Your imported media list is stored locally. Video files are not uploaded by this app.")
-        EmptyCard("App status", "Native Compose interface and local Media3 playback are implemented. Online discovery, account sync, and cloud downloads are not connected.")
+        item { Text("Privacy & ad protection", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+        item {
+            SettingSwitchCard(
+                title = "mytube promotions",
+                description = "Allow promotional placements owned by mytube. Off by default; this build has no in-app ad placements or ad SDK.",
+                checked = showMyTubePromotions,
+                onCheckedChange = onPromotionsChange
+            )
+        }
+        item {
+            SettingSwitchCard(
+                title = "Usage analytics",
+                description = "Allow optional app usage analytics. Off by default; no analytics SDK is currently included.",
+                checked = usageAnalytics,
+                onCheckedChange = onAnalyticsChange
+            )
+        }
+        item {
+            FeatureCard(
+                "Tracker protection",
+                "No third-party advertising or analytics SDK is included in this build. The app currently makes no ad-network requests."
+            )
+        }
+        item {
+            FeatureCard(
+                "YouTube ad status",
+                "This protection does not remove or intercept ads inside YouTube streams. YouTube playback and ad controls remain subject to YouTube's supported player and service rules."
+            )
+        }
+        item { EmptyCard("Local privacy", "Your imported media list is stored on this device. Video files are not uploaded by mytube.") }
+        item { EmptyCard("App status", "Native Compose interface and local Media3 playback are implemented. Online discovery, account sync, and cloud downloads are not connected.") }
+    }
+}
+
+@Composable
+private fun SettingSwitchCard(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Row(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
     }
 }
 
