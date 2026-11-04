@@ -48,11 +48,3 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// The Brave JNI wrapper declares minCompileSdk 37, but its Android-facing API
-// only uses long-established android.net.Uri APIs. Keep this app on SDK 35 and
-// skip the metadata gate until the Android 37 platform package is available.
-tasks.configureEach {
-    if (name.endsWith("AarMetadata")) {
-        enabled = false
-    }
-}
