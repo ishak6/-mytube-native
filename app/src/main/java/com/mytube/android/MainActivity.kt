@@ -240,10 +240,10 @@ private fun MyTubeApp(
                         onPlay = { playVideo(it, player, context) { activeVideo = it } },
                         onImport = { onImport?.invoke() }
                     )
-                    selectedTab == 2 -> ShortsScreen(videos = videos, youtubeApiKey = youtubeApiKey, onPlay = { playVideo(it, player) { activeVideo = it } }, onImport = { onImport?.invoke() })
+                    selectedTab == 2 -> ShortsScreen(videos = videos, youtubeApiKey = youtubeApiKey, onPlay = { playVideo(it, player, context) { activeVideo = it } }, onImport = { onImport?.invoke() })
                     selectedTab == 3 -> LibraryScreen(
                         videos = videos,
-                        onPlay = { playVideo(it, player) { activeVideo = it } },
+                        onPlay = { playVideo(it, player, context) { activeVideo = it } },
                         onImport = { onImport?.invoke() },
                         onDelete = {
                             videos.remove(it)
