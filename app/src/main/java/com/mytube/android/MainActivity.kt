@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -128,8 +129,7 @@ private fun MyTubeApp(
     var darkMode by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val youtubePrefs = remember { context.getSharedPreferences("mytube_youtube", Context.MODE_PRIVATE) }
-    var youtubeApiKey by remember { mutableStateOf(youtubePrefs.getString("api_key", "") ?: "") }
+    var youtubeApiKey by remember { mutableStateOf(SecureApiKeyStore.load(context)) }
     var activeVideo by remember { mutableStateOf<LocalVideo?>(null) }
     val player = remember { ExoPlayer.Builder(context).build() }
 
@@ -218,7 +218,7 @@ private fun MyTubeApp(
                         youtubeApiKey = youtubeApiKey,
                         onYouTubeApiKeyChange = { key ->
                             youtubeApiKey = key
-                            youtubePrefs.edit().putString("api_key", key.trim()).apply()
+                            SecureApiKeyStore.save(context, key.trim())
                         }
                     )
                     activeVideo != null -> PlayerScreen(video = activeVideo!!, player = player, onClose = {
@@ -425,7 +425,7 @@ private fun SettingsScreen(
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("YouTube Data API v3", fontWeight = FontWeight.SemiBold)
-                    OutlinedTextField(value = youtubeApiKey, onValueChange = onYouTubeApiKeyChange, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("API key") })
+                    OutlinedTextField(value = youtubeApiKey, onValueChange = onYouTubeApiKeyChange, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation(), label = { Text("API key") })
                     Text("Google Cloud Console-এ YouTube Data API v3 enable করে API key তৈরি করুন। এই key দিয়ে public video search ও metadata feed চলবে; এটি video stream URL দেয় না।", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 }
             }
