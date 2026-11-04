@@ -124,22 +124,12 @@ private fun MyTubeApp(
     val videos = remember { mutableStateListOf<LocalVideo>().apply { addAll(loadVideos(context)) } }
     var selectedTab by remember { mutableStateOf(0) }
     var darkMode by remember { mutableStateOf(true) }
-    val privacyPrefs = remember { context.getSharedPreferences("mytube_privacy", Context.MODE_PRIVATE) }
-    var showMyTubePromotions by remember { mutableStateOf(privacyPrefs.getBoolean("show_myTube_promotions", false)) }
-    var usageAnalytics by remember { mutableStateOf(privacyPrefs.getBoolean("usage_analytics", false)) }
-    var braveProtection by remember { mutableStateOf(privacyPrefs.getBoolean("brave_protection", true)) }
-    var braveStatus by remember { mutableStateOf("Initializing Brave filter engine…") }
     var showSettings by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val youtubePrefs = remember { context.getSharedPreferences("mytube_youtube", Context.MODE_PRIVATE) }
     var youtubeApiKey by remember { mutableStateOf(youtubePrefs.getString("api_key", "") ?: "") }
     var activeVideo by remember { mutableStateOf<LocalVideo?>(null) }
     val player = remember { ExoPlayer.Builder(context).build() }
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        NativeAdblock.setEnabled(braveProtection)
-        NativeAdblock.initialize { status -> braveStatus = status }
-    }
 
     androidx.compose.runtime.LaunchedEffect(initialImport?.uri) {
         val incoming = initialImport
@@ -223,24 +213,6 @@ private fun MyTubeApp(
                     showSettings -> SettingsScreen(
                         darkMode = darkMode,
                         onDarkModeChange = { darkMode = it },
-                        showMyTubePromotions = showMyTubePromotions,
-                        onPromotionsChange = {
-                            showMyTubePromotions = it
-                            privacyPrefs.edit().putBoolean("show_myTube_promotions", it).apply()
-                        },
-                        usageAnalytics = usageAnalytics,
-                        onAnalyticsChange = {
-                            usageAnalytics = it
-                            privacyPrefs.edit().putBoolean("usage_analytics", it).apply()
-                        },
-                        braveProtection = braveProtection,
-                        onBraveProtectionChange = { enabled ->
-                            braveProtection = enabled
-                            NativeAdblock.setEnabled(enabled)
-                            privacyPrefs.edit().putBoolean("brave_protection", enabled).apply()
-                        },
-                        braveStatus = braveStatus,
-                        onRefreshBrave = { NativeAdblock.refresh { status -> braveStatus = status } },
                         youtubeApiKey = youtubeApiKey,
                         onYouTubeApiKeyChange = { key ->
                             youtubeApiKey = key
@@ -413,14 +385,6 @@ private fun PremiumScreen(onSettings: () -> Unit) {
 private fun SettingsScreen(
     darkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
-    showMyTubePromotions: Boolean,
-    onPromotionsChange: (Boolean) -> Unit,
-    usageAnalytics: Boolean,
-    onAnalyticsChange: (Boolean) -> Unit,
-    braveProtection: Boolean,
-    onBraveProtectionChange: (Boolean) -> Unit,
-    braveStatus: String,
-    onRefreshBrave: () -> Unit,
     youtubeApiKey: String,
     onYouTubeApiKeyChange: (String) -> Unit
 ) {
@@ -444,53 +408,8 @@ private fun SettingsScreen(
                 }
             }
         }
-        item { Text("Privacy & ad protection", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
-        item {
-            SettingSwitchCard(
-                title = "Brave network protection",
-                description = "Use Brave adblock-rust to check requests made through mytube’s own protected HTTP client. This does not intercept YouTube player traffic.",
-                checked = braveProtection,
-                onCheckedChange = onBraveProtectionChange
-            )
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Brave filter engine", fontWeight = FontWeight.SemiBold)
-                    Text(braveStatus, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                    Text("Filter rules are downloaded from EasyList and EasyPrivacy. The engine only affects requests routed through mytube’s NativeAdblock HTTP client.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                    TextButton(onClick = onRefreshBrave) { Text("Update filter lists") }
-                }
-            }
-        }
-        item {
-            SettingSwitchCard(
-                title = "mytube promotions",
-                description = "Allow promotional placements owned by mytube. Off by default; this build has no in-app ad placements or ad SDK.",
-                checked = showMyTubePromotions,
-                onCheckedChange = onPromotionsChange
-            )
-        }
-        item {
-            SettingSwitchCard(
-                title = "Usage analytics",
-                description = "Allow optional app usage analytics. Off by default; no analytics SDK is currently included.",
-                checked = usageAnalytics,
-                onCheckedChange = onAnalyticsChange
-            )
-        }
-        item {
-            FeatureCard(
-                "Tracker protection",
-                "Brave adblock-rust is available to mytube-owned HTTP requests routed through NativeAdblock. No current online feed/player request is connected to that client yet."
-            )
-        }
-        item {
-            FeatureCard(
-                "YouTube ad status",
-                "Brave’s filter engine cannot automatically inspect or remove ads inside YouTube’s player pipeline. This app currently has no YouTube stream integration."
-            )
-        }
+        item { Text("Privacy", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+        item { EmptyCard("Ad-free app interface", "MyTube does not include YouTube ad overlays, ad playback components, advertising SDKs, or ad network endpoints.") }
         item { EmptyCard("Local privacy", "Your imported media list is stored on this device. Video files are not uploaded by mytube.") }
         item { EmptyCard("App status", "Native Compose interface and local Media3 playback are implemented. Online discovery, account sync, and cloud downloads are not connected.") }
     }
