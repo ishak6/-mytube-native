@@ -362,7 +362,6 @@ private fun ShortsScreen(videos: List<LocalVideo>, youtubeApiKey: String, onPlay
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
         YouTubeShortsFeed(apiKey = youtubeApiKey)
         Text("Shorts • Local videos", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        EmptyCard("Local short-video shelf", "This section can play videos you import. A public Shorts feed is not connected because it requires an authorized content source.")
         if (videos.isEmpty()) {
             Button(onClick = onImport) { Icon(Icons.Filled.Add, null); Text("  Import a video") }
         } else {
