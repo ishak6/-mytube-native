@@ -61,7 +61,7 @@ fun YouTubeHomeFeed(apiKey: String) {
         }
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         if (videos.isNotEmpty()) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(440.dp)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(320.dp)) {
                 items(videos, key = { it.id }) { video -> YouTubeVideoCard(video) { selected = video } }
             }
         }
@@ -95,7 +95,7 @@ fun YouTubeSearchFeed(apiKey: String) {
             }
         }, enabled = !loading) { Text(if (loading) "Searching…" else "Search") }
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(470.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(270.dp)) {
             items(videos, key = { it.id }) { video -> YouTubeVideoCard(video) { selected = video } }
         }
     }
@@ -129,7 +129,7 @@ fun YouTubeShortsFeed(apiKey: String) {
             TextButton(onClick = { load() }, enabled = !loading) { Text("Refresh") }
         }
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(500.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(400.dp)) {
             items(videos, key = { it.id }) { video -> YouTubeVideoCard(video) { selected = video } }
         }
     }
