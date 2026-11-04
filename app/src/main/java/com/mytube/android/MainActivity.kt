@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
                 // Some document providers do not offer persistable permissions.
             }
             val title = queryDisplayName(uri) ?: "Video ${System.currentTimeMillis()}"
-            setContent { MyTubeApp(onImport = { videoPicker.launch(arrayOf("video/*")) }, initialImport = LocalVideo(uri.toString(), title)) }
+            setContent { MyTubeApp(onImport = { launchVideoPicker() }, initialImport = LocalVideo(uri.toString(), title)) }
         }
     }
 
@@ -105,9 +105,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    private fun launchVideoPicker() {\n        videoPicker.launch(arrayOf("video/*"))\n    }\n\n    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MyTubeApp(onImport = { videoPicker.launch(arrayOf("video/*")) }) }
+        setContent { MyTubeApp(onImport = { launchVideoPicker() }) }
     }
 }
 
