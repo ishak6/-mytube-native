@@ -79,6 +79,7 @@ private val appTabs = listOf(
     AppTab("Search", Icons.Filled.Search),
     AppTab("Shorts", Icons.Filled.SmartDisplay),
     AppTab("Library", Icons.Filled.VideoLibrary),
+    AppTab("History", Icons.Filled.Movie),
     AppTab("Premium", Icons.Filled.Star)
 )
 
@@ -122,6 +123,7 @@ private fun MyTubeApp(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val videos = remember { mutableStateListOf<LocalVideo>().apply { addAll(loadVideos(context)) } }
+    val history = remember { mutableStateListOf<LocalVideo>().apply { addAll(loadHistory(context)) } }
     var selectedTab by remember { mutableStateOf(0) }
     var darkMode by remember { mutableStateOf(true) }
     var showSettings by remember { mutableStateOf(false) }
@@ -227,7 +229,7 @@ private fun MyTubeApp(
                         videos = videos,
                         youtubeApiKey = youtubeApiKey,
                         onImport = { onImport?.invoke() },
-                        onPlay = { video -> playVideo(video, player) { activeVideo = video } },
+                        onPlay = { video -> playVideo(video, player, context) { activeVideo = video } },
                         onLibrary = { selectedTab = 3 }
                     )
                     selectedTab == 1 -> SearchScreen(
@@ -235,7 +237,7 @@ private fun MyTubeApp(
                         onQueryChange = { searchQuery = it },
                         videos = videos,
                         youtubeApiKey = youtubeApiKey,
-                        onPlay = { playVideo(it, player) { activeVideo = it } },
+                        onPlay = { playVideo(it, player, context) { activeVideo = it } },
                         onImport = { onImport?.invoke() }
                     )
                     selectedTab == 2 -> ShortsScreen(videos = videos, youtubeApiKey = youtubeApiKey, onPlay = { playVideo(it, player) { activeVideo = it } }, onImport = { onImport?.invoke() })
@@ -248,6 +250,7 @@ private fun MyTubeApp(
                             saveVideos(context, videos)
                         }
                     )
+                    selectedTab == 4 -> HistoryScreen(history = history, onPlay = { video -> playVideo(video, player, context) { activeVideo = video } }, onClear = { history.clear(); saveHistory(context, history) })
                     else -> PremiumScreen(onSettings = { showSettings = true })
                 }
             }
@@ -255,10 +258,14 @@ private fun MyTubeApp(
     }
 }
 
-private fun playVideo(video: LocalVideo, player: ExoPlayer, onPlaying: () -> Unit) {
+private fun playVideo(video: LocalVideo, player: ExoPlayer, context: Context, onPlaying: () -> Unit) {
     player.setMediaItem(MediaItem.fromUri(Uri.parse(video.uri)))
     player.prepare()
     player.playWhenReady = true
+    val history = loadHistory(context).toMutableList()
+    history.removeAll { it.uri == video.uri }
+    history.add(0, video)
+    saveHistory(context, history.take(100))
     onPlaying()
 }
 
@@ -364,6 +371,21 @@ private fun LibraryScreen(
                     VideoRow(video = video, onPlay = { onPlay(video) }, onDelete = { onDelete(video) })
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun HistoryScreen(history: List<LocalVideo>, onPlay: (LocalVideo) -> Unit, onClear: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Watch history", fontSize = 23.sp, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onClear, enabled = history.isNotEmpty()) { Text("Clear") }
+        }
+        if (history.isEmpty()) EmptyCard("No watch history", "Videos you play from your local library will appear here.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(history, key = { it.uri }) { video -> VideoRow(video = video, onPlay = { onPlay(video) }) }
         }
     }
 }
@@ -500,6 +522,27 @@ private fun EmptyCard(title: String, message: String) {
             Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+
+private fun loadHistory(context: Context): List<LocalVideo> {
+    val raw = context.getSharedPreferences("mytube_history", Context.MODE_PRIVATE).getString("history", "[]") ?: "[]"
+    return try {
+        val array = JSONArray(raw)
+        buildList {
+            for (i in 0 until array.length()) {
+                val item = array.getJSONObject(i)
+                add(LocalVideo(item.getString("uri"), item.getString("title")))
+            }
+        }
+    } catch (_: Exception) { emptyList() }
+}
+
+private fun saveHistory(context: Context, history: List<LocalVideo>) {
+    val array = JSONArray()
+    history.forEach { array.put(JSONObject().put("uri", it.uri).put("title", it.title)) }
+    context.getSharedPreferences("mytube_history", Context.MODE_PRIVATE)
+        .edit().putString("history", array.toString()).apply()
 }
 
 private fun loadVideos(context: Context): List<LocalVideo> {
