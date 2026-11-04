@@ -45,6 +45,16 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
+// Keep transitive Kotlin stdlib artifacts aligned with this project's Kotlin 2.0.21 compiler.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+            useVersion("2.0.21")
+            because("Avoid Kotlin metadata 2.4.x being loaded by the Kotlin 2.0.21 compiler")
+        }
+    }
+}
+
 // The Brave JNI wrapper declares minCompileSdk 37, but its Android-facing API
 // only uses long-established android.net.Uri APIs. Keep this app on SDK 35 and
 // skip the metadata gate until the Android 37 platform package is available.
