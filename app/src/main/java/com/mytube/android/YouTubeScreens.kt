@@ -1,5 +1,7 @@
 package com.mytube.android
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
@@ -153,6 +156,7 @@ private fun YouTubeVideoCard(video: YouTubeVideo, onClick: () -> Unit) {
 
 @Composable
 private fun YouTubeVideoInfoDialog(video: YouTubeVideo, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(video.title) },
@@ -161,9 +165,16 @@ private fun YouTubeVideoInfoDialog(video: YouTubeVideo, onDismiss: () -> Unit) {
                 Text(video.channel, fontWeight = FontWeight.SemiBold)
                 Text(video.description.take(500))
                 Text("ভিডিও ID: " + video.id, style = MaterialTheme.typography.labelSmall)
-                Text("এই build-এ YouTube metadata দেখা যায়; অনুমোদিত Native playback stream এখনও সংযুক্ত হয়নি।")
+                Text("MyTube YouTube-এর পাবলিক metadata দেখায়। Native-only নিয়মে এই অ্যাপ YouTube-এর private stream URL ব্যবহার করে না; ভিডিও অফিসিয়াল YouTube app বা browser-এ খোলা হবে।")
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("বন্ধ করুন") } }
+        confirmButton = {
+            TextButton(onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=${video.id}"))
+                context.startActivity(intent)
+                onDismiss()
+            }) { Text("YouTube-এ খুলুন") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("বন্ধ করুন") } }
     )
 }
