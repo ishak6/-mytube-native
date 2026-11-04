@@ -127,10 +127,17 @@ private fun MyTubeApp(
     val privacyPrefs = remember { context.getSharedPreferences("mytube_privacy", Context.MODE_PRIVATE) }
     var showMyTubePromotions by remember { mutableStateOf(privacyPrefs.getBoolean("show_myTube_promotions", false)) }
     var usageAnalytics by remember { mutableStateOf(privacyPrefs.getBoolean("usage_analytics", false)) }
+    var braveProtection by remember { mutableStateOf(privacyPrefs.getBoolean("brave_protection", true)) }
+    var braveStatus by remember { mutableStateOf("Initializing Brave filter engine…") }
     var showSettings by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var activeVideo by remember { mutableStateOf<LocalVideo?>(null) }
     val player = remember { ExoPlayer.Builder(context).build() }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        NativeAdblock.setEnabled(braveProtection)
+        NativeAdblock.initialize { status -> braveStatus = status }
+    }
 
     androidx.compose.runtime.LaunchedEffect(initialImport?.uri) {
         val incoming = initialImport
@@ -223,7 +230,15 @@ private fun MyTubeApp(
                         onAnalyticsChange = {
                             usageAnalytics = it
                             privacyPrefs.edit().putBoolean("usage_analytics", it).apply()
-                        }
+                        },
+                        braveProtection = braveProtection,
+                        onBraveProtectionChange = { enabled ->
+                            braveProtection = enabled
+                            NativeAdblock.setEnabled(enabled)
+                            privacyPrefs.edit().putBoolean("brave_protection", enabled).apply()
+                        },
+                        braveStatus = braveStatus,
+                        onRefreshBrave = { NativeAdblock.refresh { status -> braveStatus = status } }
                     )
                     activeVideo != null -> PlayerScreen(video = activeVideo!!, player = player, onClose = {
                         player.pause()
@@ -389,7 +404,11 @@ private fun SettingsScreen(
     showMyTubePromotions: Boolean,
     onPromotionsChange: (Boolean) -> Unit,
     usageAnalytics: Boolean,
-    onAnalyticsChange: (Boolean) -> Unit
+    onAnalyticsChange: (Boolean) -> Unit,
+    braveProtection: Boolean,
+    onBraveProtectionChange: (Boolean) -> Unit,
+    braveStatus: String,
+    onRefreshBrave: () -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
         item { Text("Settings", fontSize = 23.sp, fontWeight = FontWeight.Bold) }
@@ -402,6 +421,24 @@ private fun SettingsScreen(
             )
         }
         item { Text("Privacy & ad protection", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+        item {
+            SettingSwitchCard(
+                title = "Brave network protection",
+                description = "Use Brave adblock-rust to check requests made through mytube’s own protected HTTP client. This does not intercept YouTube player traffic.",
+                checked = braveProtection,
+                onCheckedChange = onBraveProtectionChange
+            )
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Brave filter engine", fontWeight = FontWeight.SemiBold)
+                    Text(braveStatus, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    Text("Filter rules are downloaded from EasyList and EasyPrivacy. The engine only affects requests routed through mytube’s NativeAdblock HTTP client.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    TextButton(onClick = onRefreshBrave) { Text("Update filter lists") }
+                }
+            }
+        }
         item {
             SettingSwitchCard(
                 title = "mytube promotions",
@@ -421,13 +458,13 @@ private fun SettingsScreen(
         item {
             FeatureCard(
                 "Tracker protection",
-                "No third-party advertising or analytics SDK is included in this build. The app currently makes no ad-network requests."
+                "Brave adblock-rust is available to mytube-owned HTTP requests routed through NativeAdblock. No current online feed/player request is connected to that client yet."
             )
         }
         item {
             FeatureCard(
                 "YouTube ad status",
-                "This protection does not remove or intercept ads inside YouTube streams. YouTube playback and ad controls remain subject to YouTube's supported player and service rules."
+                "Brave’s filter engine cannot automatically inspect or remove ads inside YouTube’s player pipeline. This app currently has no YouTube stream integration."
             )
         }
         item { EmptyCard("Local privacy", "Your imported media list is stored on this device. Video files are not uploaded by mytube.") }
