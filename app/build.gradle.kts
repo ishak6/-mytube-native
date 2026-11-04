@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.mytube.android"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.mytube.android"
