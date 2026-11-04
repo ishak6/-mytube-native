@@ -1,21 +1,27 @@
 # mytube-native
 
-A native Android video discovery and media app built with Kotlin and Jetpack Compose.
+Native Android video app built with Kotlin, Jetpack Compose, and AndroidX Media3.
 
-## First milestone
+## Implemented in v0.2.0
 
-- Native Jetpack Compose interface
-- Home, Search, Shorts, Library, and Premium tabs
-- System, light, and dark theme support
+- Five working bottom navigation destinations: Home, Search, Shorts, Library, Premium
+- Settings screen and dark/light theme switch
+- Import local video files using Android's document picker
+- Persist imported video references across app restarts
+- Search imported videos by filename
+- Play local videos using AndroidX Media3 (ExoPlayer / PlayerView)
+- Remove videos from the in-app library
 - No WebView dependency
-- No API key required to launch
-- Honest empty and pending states; no fabricated search results
-- GitHub Actions APK build
 
-## Playback and offline media
+## Not yet implemented
 
-Playback, background audio, and offline downloads will support media sources the app is authorized to access. The app will not bypass YouTube ads, DRM, Premium restrictions, or download controls. YouTube metadata/search integration and media playback are separate capabilities.
+- YouTube/online home feed, trending, categories, and Shorts feed
+- Provider account login, cloud sync, and online subscriptions
+- Background playback service and offline downloads from external providers
+- Cross-device library sync
 
-## Build status
+These require authorized provider APIs, backend work, and/or additional media-service implementation. The app does not bypass ads, DRM, Premium restrictions, or provider download controls.
 
-Initial project setup is in progress. Features will be marked as implemented, pending configuration, or planned rather than represented as complete prematurely.
+## Build
+
+GitHub Actions builds a debug APK from `.github/workflows/android.yml`.
